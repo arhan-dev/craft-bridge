@@ -105,6 +105,18 @@ create policy "Artisans can delete their own products"
   on public.products for delete
   using (auth.uid() = artisan_id);
 
+-- ---------- BASE TABLE GRANTS ----------
+-- Row Level Security policies above only take effect once these base grants
+-- exist — without them, Postgres blocks access before RLS is even evaluated,
+-- producing "permission denied for table X" errors.
+grant usage on schema public to anon, authenticated;
+
+grant select on public.profiles to anon, authenticated;
+grant insert, update on public.profiles to authenticated;
+
+grant select on public.products to anon, authenticated;
+grant insert, update, delete on public.products to authenticated;
+
 -- ---------- STORAGE ----------
 -- Create the "product-images" bucket if it doesn't already exist, and make it public-read.
 insert into storage.buckets (id, name, public)
