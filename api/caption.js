@@ -71,7 +71,8 @@ export default async function handler(req, res) {
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 400
+          maxOutputTokens: 1024,
+          responseMimeType: "application/json"
         }
       })
     });
@@ -99,15 +100,22 @@ export default async function handler(req, res) {
     try {
       parsed = JSON.parse(cleaned);
     } catch (error) {
-      parsed = {
-        title: "Handcrafted Product",
-        category: "Home Decor",
-        description:
-          cleaned ||
-          "Unable to generate a description for this image.",
-        tags: ["Handmade"]
-      };
+      // Gemini's raw text wasn't valid JSON (e.g. got cut off, or included
+      // stray formatting). Don't dump the broken JSON into the description —
+      // return a 502 instead so the frontend shows a clear error and the
+      // artisan can just fill the form in manually.
+      return res.status(502).json({
+        error: "Gemini returned a response that wasn't valid JSON, so no listing details could be extracted. Please try again."
+      });
     }
+
+    // Guard against missing/odd fields even when JSON parsing succeeds.
+    parsed = {
+      title: typeof parsed.title === "string" ? parsed.title : "",
+      category: typeof parsed.category === "string" ? parsed.category : "",
+      description: typeof parsed.description === "string" ? parsed.description : "",
+      tags: Array.isArray(parsed.tags) ? parsed.tags.filter(t => typeof t === "string") : []
+    };
 
     return res.status(200).json(parsed);
 
