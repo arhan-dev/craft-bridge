@@ -782,6 +782,7 @@ footer{
 
       <form class="review-form" id="reviewForm" style="display:none;">
         <p class="review-note">AI-generated — review and edit anything before publishing.</p>
+        <p class="ai-error" id="aiErrorBanner" style="margin-top:-8px;"></p>
         <div class="review-grid">
           <div class="field">
             <label for="rTitle">Product Title</label>
@@ -1581,6 +1582,9 @@ function resetListingForm(){
   const status = document.getElementById('formStatus');
   status.className = 'form-status';
   status.innerHTML = '';
+  const errorBanner = document.getElementById('aiErrorBanner');
+  errorBanner.textContent = '';
+  errorBanner.classList.remove('active');
 }
 
 dropZone.addEventListener('click', () => fileInput.click());
@@ -1646,17 +1650,25 @@ async function runAIAnalysis(dataUrl){
   } catch(err){
     clearInterval(stepTimer);
     aiLoading.classList.remove('active');
-    setActiveStep(1);
-    aiError.textContent = 'AI analysis unavailable right now: ' + err.message + '. (Check that GEMINI_API_KEY is set in your Vercel project environment variables.) You can still fill in the listing manually below.';
+    const message = 'AI analysis unavailable right now: ' + err.message + '. (Check that GEMINI_API_KEY is set in your Vercel project environment variables, and that you redeployed after adding it.) You can still fill in the listing manually below.';
+    aiError.textContent = message;
     aiError.classList.add('active');
-    showReviewStep({});
+    showReviewStep({}, message);
   }
 }
 
-function showReviewStep(data){
+function showReviewStep(data, errorMessage){
   setActiveStep(3);
   stepUpload.style.display = 'none';
   reviewForm.style.display = 'block';
+  const errorBanner = document.getElementById('aiErrorBanner');
+  if(errorMessage){
+    errorBanner.textContent = errorMessage;
+    errorBanner.classList.add('active');
+  } else {
+    errorBanner.textContent = '';
+    errorBanner.classList.remove('active');
+  }
   document.getElementById('rTitle').value = data.title || '';
   document.getElementById('rDesc').value = data.description || '';
   document.getElementById('rTags').value = (data.tags || []).join(', ');
